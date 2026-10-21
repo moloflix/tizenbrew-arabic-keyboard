@@ -7,7 +7,7 @@
   if (window.__tvakLoaded) return;
   window.__tvakLoaded = true;
 
-  var VERSION = '1.5.2';
+  var VERSION = '1.5.3';
   var CONFIG = {
     browserBar: true,       // شريط التصفح (رجوع/للأمام/تحديث/رابط) في وضع المؤشر + صفحة رئيسية
     backGoesBack: true,     // زر Back يرجع للصفحة السابقة بدل الخروج (إن لم تعالجه الصفحة)
@@ -104,11 +104,11 @@
     'border:1px solid rgba(255,255,255,0.28);border-radius:46px;box-shadow:0 14px 40px rgba(0,0,0,0.38);padding:12px 24px;direction:ltr;',
     'font-family:Arial,"Noto Sans Arabic",sans-serif;-webkit-transform-origin:0 0;transform-origin:0 0;}',
     '#tvak-bar.tvak-on{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;}',
-    '#tvak-bar .tvak-bbtn{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;',
-    '-webkit-justify-content:center;justify-content:center;width:58px;height:58px;margin-right:10px;',
+    '#tvak-bar .tvak-bbtn{position:relative;display:block;-webkit-flex:none;flex:none;',
+    'width:58px;height:58px;margin-right:10px;',
     'background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.3);border-radius:29px;box-sizing:border-box;',
     'box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 6px 18px rgba(0,0,0,0.25);}',
-    '#tvak-bar .tvak-bbtn svg{display:block;width:30px;height:30px;}',
+    '#tvak-bar .tvak-bbtn svg{position:absolute;display:block;left:50%;top:50%;width:30px;height:30px;margin:-15px 0 0 -15px;}',
     '#tvak-bar .tvak-bgo{background:rgba(47,123,255,0.55);margin-right:0;}',
     '#tvak-bar .tvak-burl{-webkit-flex:1;flex:1;min-width:0;height:58px;margin:0 10px 0 6px;padding:0 28px;',
     'background:rgba(255,255,255,0.12);color:#fff;font-size:24px;border:1px solid rgba(255,255,255,0.3);border-radius:29px;',
@@ -134,11 +134,11 @@
     '-webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%);',
     'box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 14px 38px rgba(0,0,0,0.35);}',
     '#tvak-home .tvak-finner{display:block;margin:auto;text-align:center;}',
-    '#tvak-home .tvak-ficon{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;',
-    '-webkit-justify-content:center;justify-content:center;width:108px;height:108px;border-radius:54px;margin:0 auto 14px;',
+    '#tvak-home .tvak-ficon{position:relative;display:block;text-align:center;line-height:108px;',
+    'width:108px;height:108px;border-radius:54px;margin:0 auto 14px;',
     'font-size:46px;font-weight:bold;color:#fff;border:1px solid rgba(255,255,255,0.4);',
     'box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);}',
-    '#tvak-home .tvak-ficon svg{display:block;width:60px;height:60px;margin:auto;}',
+    '#tvak-home .tvak-ficon svg{position:absolute;display:block;left:50%;top:50%;width:60px;height:60px;margin:-30px 0 0 -30px;}',
     '#tvak-home .tvak-flabel{display:block;font-size:26px;text-shadow:0 2px 10px rgba(0,0,0,0.5);}',
     // ---- تمييز العنصر تحت المؤشر ----
     '#tvak-home .tvak-hsearch::-webkit-input-placeholder{color:rgba(255,255,255,0.82);}',

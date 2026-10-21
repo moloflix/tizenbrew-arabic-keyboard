@@ -7,8 +7,9 @@
   if (window.__tvakLoaded) return;
   window.__tvakLoaded = true;
 
-  var VERSION = '1.5.4';
+  var VERSION = '1.5.5';
   var CONFIG = {
+    pointerAlwaysOn: true,  // المؤشر ظاهر دائماً؛ OK مطوّل يخفيه/يُظهره، والرجوع للصفحة السابقة
     browserBar: true,       // شريط التصفح (رجوع/للأمام/تحديث/رابط) في وضع المؤشر + صفحة رئيسية
     backGoesBack: true,     // زر Back يرجع للصفحة السابقة بدل الخروج (إن لم تعالجه الصفحة)
     homeUrl: 'https://example.com/?tvak=home',
@@ -679,6 +680,7 @@
     unbind();
     state.dismissed = el;
     state.noAutoUntil = now() + CONFIG.suppressMs;
+    if (CONFIG.pointerAlwaysOn) setTimeout(autoPointer, 0); // المؤشر يعود بعد إغلاق الكيبورد
   }
 
   function switchMode(mode, keyName) {
@@ -880,6 +882,11 @@
     ptr.x = Math.max(m, Math.min(w - m, nx));
     ptr.y = Math.max(m, Math.min(h - m, ny));
     positionCursor();
+    // المؤشر الدائم: شريط التصفح يظهر فقط عندما يقترب المؤشر من أعلى الشاشة
+    if (CONFIG.pointerAlwaysOn) {
+      if (ptr.y < 190 * uiScale()) showBar();
+      else hideBar();
+    }
     doHover();
   }
 
@@ -925,8 +932,9 @@
     if (typeof el.click === 'function') el.click(); else mouseEv('click', el);
   }
 
-  function enterPointer(x, y) {
+  function enterPointer(x, y, quiet) {
     if (state.open) closeKeyboard();
+    ptr.userHidden = false;
     if (!ensurePointerUI()) return;
     var w = window.innerWidth || 1920;
     var h = window.innerHeight || 1080;
@@ -938,8 +946,12 @@
     ptr.on = true;
     ptr.el.className = 'tvak-on';
     positionCursor();
-    showBar();
-    showToast('وضع المؤشر: الأسهم للتحريك، زر الموافقة للنقر، زر الرجوع للخروج');
+    if (!CONFIG.pointerAlwaysOn) showBar();
+    if (!quiet) {
+      showToast(CONFIG.pointerAlwaysOn
+        ? 'المؤشر ظاهر · OK مطوّل لإخفائه'
+        : 'وضع المؤشر: الأسهم للتحريك، زر الموافقة للنقر، زر الرجوع للخروج');
+    }
     if (ptr.fromParent) {
       try { window.parent.postMessage({ tvak: 'ptr-ack' }, '*'); } catch (e) {}
     }
@@ -960,8 +972,9 @@
 
   // يعيد true إن عولج المفتاح
   function onPointerKey(e, code) {
+    if (KEY_BACK.indexOf(code) !== -1 && CONFIG.pointerAlwaysOn) return false; // الرجوع للصفحة، لا يُخفي المؤشر
     if (PTR_TOGGLE.indexOf(code) !== -1 || KEY_BACK.indexOf(code) !== -1) {
-      if (!e.repeat) exitPointer();
+      if (!e.repeat) { exitPointer(); ptr.userHidden = true; }
       return true;
     }
     var dx = 0, dy = 0;
@@ -976,6 +989,18 @@
       return true;
     }
     if (code === 13) {
+      if (CONFIG.pointerAlwaysOn) {
+        // ضغطة قصيرة = نقر (عند رفع الزر)، مطوّلة = إخفاء المؤشر
+        if (!e.repeat && !ptr.ignoreOk && !ptr.okTimer) {
+          ptr.okTimer = setTimeout(function () {
+            ptr.okTimer = null;
+            exitPointer();
+            ptr.userHidden = true;
+            if (ensurePointerUI()) showToast('المؤشر مخفي · OK مطوّل لإظهاره');
+          }, 800);
+        }
+        return true;
+      }
       if (!e.repeat && !ptr.ignoreOk) clickPointer();
       return true;
     }
@@ -1249,7 +1274,7 @@
     updateClock();
     if (clockTimer) clearInterval(clockTimer);
     clockTimer = setInterval(updateClock, 20000);
-    enterPointer(); // نبدأ بوضع المؤشر ليتمكن المستخدم من الاختيار مباشرة
+    enterPointer(undefined, undefined, CONFIG.pointerAlwaysOn); // نبدأ بوضع المؤشر ليتمكن المستخدم من الاختيار مباشرة
   }
 
   function onReady(fn) {
@@ -1374,6 +1399,11 @@
       if (ptr.holdTimer) { clearTimeout(ptr.holdTimer); ptr.holdTimer = null; }
       ptr.ignoreOk = false;
       if (ptr.holdFired) { ptr.holdFired = false; eat(e); return; }
+      if (ptr.okTimer) {
+        clearTimeout(ptr.okTimer);
+        ptr.okTimer = null;
+        if (ptr.on) clickPointer();
+      }
     }
     if (swallowUp[e.keyCode]) {
       delete swallowUp[e.keyCode];
@@ -1552,13 +1582,20 @@
   // Back كمتصفح: يرجع للصفحة السابقة إن لم تعالج الصفحة المفتاح بنفسها (يُنفَّذ بعد معالجات الصفحة)
   window.addEventListener('keydown', function (e) {
     if (!CONFIG.backGoesBack || e.keyCode !== 10009 || e.defaultPrevented || synthetic) return;
-    if (state.open || ptr.on) return;
+    if (state.open || (ptr.on && !CONFIG.pointerAlwaysOn)) return;
     if (window.history && history.length > 1) {
       e.preventDefault();
       history.back();
     }
   }, false);
   onReady(buildHome);
+  // المؤشر الدائم: يظهر تلقائياً في الإطار الرئيسي فقط (لا في الإطارات الداخلية)
+  function autoPointer() {
+    var isTop = false;
+    try { isTop = window.top === window; } catch (e) { isTop = false; }
+    if (CONFIG.pointerAlwaysOn && isTop && !ptr.on && !ptr.userHidden && !state.open) enterPointer(undefined, undefined, true);
+  }
+  onReady(autoPointer);
   installAdBlock();
   document.addEventListener('focus', onFocus, true);
   document.addEventListener('blur', onBlur, true);

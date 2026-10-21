@@ -32,7 +32,7 @@
    gh/<user>/<repo>
    ```
    مثال: `gh/moloflix/tizenbrew-arabic-keyboard`
-3. لتثبيت نسخة محددة استخدم الوسم: `gh/<user>/<repo>@v1.5.4`
+3. لتثبيت نسخة محددة استخدم الوسم: `gh/<user>/<repo>@v1.5.5`
    (jsDelivr يخزّن `main` مؤقتاً لساعات، لذلك الوسم أضمن).
 4. شغّل الموديول **Arabic Keyboard** من القائمة. يفتح `websiteURL` (الافتراضي Google)؛ غيّره في `package.json` إن أردت.
 
@@ -55,12 +55,12 @@
 ```bash
 # 1) حدّث "version" في package.json، ثم:
 git add -A
-git commit -m "release: v1.5.4"
-git tag v1.5.4
+git commit -m "release: v1.5.5"
+git tag v1.5.5
 git push origin main --tags
-# 2) (اختياري) أنشئ Release من صفحة GitHub أو: gh release create v1.5.4 --generate-notes
+# 2) (اختياري) أنشئ Release من صفحة GitHub أو: gh release create v1.5.5 --generate-notes
 ```
-بعد النشر استخدم `gh/<user>/<repo>@v1.5.4` في TizenBrew. إن لم يظهر التحديث، أضف وسماً جديداً (لا تعد استخدام نفس الوسم) أو أفرغ كاش jsDelivr من `https://www.jsdelivr.com/tools/purge`.
+بعد النشر استخدم `gh/<user>/<repo>@v1.5.5` في TizenBrew. إن لم يظهر التحديث، أضف وسماً جديداً (لا تعد استخدام نفس الوسم) أو أفرغ كاش jsDelivr من `https://www.jsdelivr.com/tools/purge`.
 
 ### ما لم يُختبر
 - ظهور/عدم ظهور الكيبورد الأصلي على Tizen (الحل يعتمد على `inputmode="none"` و`readonly`).
@@ -95,7 +95,7 @@ An on-screen Arabic keyboard for the Samsung (Tizen) TV browser, driven by the r
 ### Install
 1. Open **TizenBrew** → **Module Manager**.
 2. Add a GitHub module and enter `gh/<user>/<repo>` (e.g. `gh/moloflix/tizenbrew-arabic-keyboard`).
-3. To pin a version use a tag: `gh/<user>/<repo>@v1.5.4` (jsDelivr caches `main`).
+3. To pin a version use a tag: `gh/<user>/<repo>@v1.5.5` (jsDelivr caches `main`).
 4. Launch **Arabic Keyboard**. It opens `websiteURL` (Google by default); edit it in `package.json`.
 
 ### Controls
@@ -106,12 +106,12 @@ Arrows move, OK types / opens the keyboard on a field, Back closes the keyboard.
 
 ### Release
 ```bash
-git add -A && git commit -m "release: v1.5.4"
-git tag v1.5.4
+git add -A && git commit -m "release: v1.5.5"
+git tag v1.5.5
 git push origin main --tags
-gh release create v1.5.4 --generate-notes   # optional
+gh release create v1.5.5 --generate-notes   # optional
 ```
-Then use `gh/<user>/<repo>@v1.5.4`. If an update doesn't show, use a new tag or purge jsDelivr's cache.
+Then use `gh/<user>/<repo>@v1.5.5`. If an update doesn't show, use a new tag or purge jsDelivr's cache.
 
 ### Not tested
 Native keyboard suppression on real Tizen, actual remote key codes, iframe behavior, site-specific behavior (YouTube, etc.), and Arabic font rendering on TV fonts.

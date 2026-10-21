@@ -7,7 +7,7 @@
   if (window.__tvakLoaded) return;
   window.__tvakLoaded = true;
 
-  var VERSION = '1.2.2';
+  var VERSION = '1.2.3';
   var CONFIG = {
     showHint: true,         // رسالة قصيرة عند تحميل الصفحة تُظهر الإصدار (للتأكد أن الموديول يعمل)
     showKeyCodes: true,     // يعرض رمز أي زر غير معروف تضغطه (للتشخيص)
@@ -19,6 +19,10 @@
 
   // ---------- تشخيص مستقل (inline styles فقط، لا يعتمد على بقية الكود) ----------
   var diagTimer = null;
+  function errText(err) {
+    var st = err && err.stack ? String(err.stack).split('\n').slice(0, 3).join(' ').replace(/\s+/g, ' ') : '';
+    return ((err && err.message) || String(err)) + ' ' + st;
+  }
   function diag(text, ms) {
     if (!CONFIG.debugBanner) return;
     try {
@@ -43,7 +47,7 @@
     document.addEventListener('DOMContentLoaded', function () { diag('TVAK v' + VERSION + ' ready', 6000); });
   }
   window.addEventListener('error', function (e) {
-    if (!e.filename) diag('TVAK error: ' + e.message + ' @' + e.lineno, 10000);
+    if (!e.filename) diag('TVAK error: ' + errText(e.error || { message: e.message }) + ' line ' + e.lineno, 20000);
   });
 
   // ---------- CSS (مضمّن لأن TizenBrew يحقن ملف JS واحد فقط) ----------
@@ -649,16 +653,27 @@
 
   function ensurePointerUI() {
     if (!ensureUI()) return false;
-    if (!ptr.el) {
-      ptr.el = document.createElement('div');
-      ptr.el.id = 'tvak-cursor';
-      ptr.el.innerHTML = '<svg width="100%" height="100%" viewBox="0 0 24 24">' +
-        '<path d="M3 2 L3 19 L7.5 14.8 L10.5 21.5 L13.2 20.3 L10.2 13.8 L16.5 13.8 Z" ' +
-        'fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>';
-      ptr.toast = document.createElement('div');
-      ptr.toast.id = 'tvak-toast';
-    }
     var host = document.body || document.documentElement;
+    if (!host) return false;
+    if (!ptr.toast) {
+      var t = document.createElement('div');
+      t.id = 'tvak-toast';
+      ptr.toast = t;
+    }
+    if (!ptr.el) {
+      var c = document.createElement('div');
+      c.id = 'tvak-cursor';
+      try {
+        c.innerHTML = '<svg width="100%" height="100%" viewBox="0 0 24 24">' +
+          '<path d="M3 2 L3 19 L7.5 14.8 L10.5 21.5 L13.2 20.3 L10.2 13.8 L16.5 13.8 Z" ' +
+          'fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+      } catch (e) {
+        c.textContent = '➤'; // بديل نصي إن فشل SVG
+        c.style.color = '#fff';
+        c.style.fontSize = '36px';
+      }
+      ptr.el = c;
+    }
     if (ptr.el.parentNode !== host) host.appendChild(ptr.el);
     if (ptr.toast.parentNode !== host) host.appendChild(ptr.toast);
     return true;
@@ -876,7 +891,7 @@
       if (!synthetic) diag('key ' + e.keyCode + (e.repeat ? ' (repeat)' : ''), 2500);
       handleKeyDown(e);
     } catch (err) {
-      diag('TVAK keydown error: ' + (err && err.message), 10000);
+      diag('TVAK keydown error: ' + errText(err), 20000);
     }
   }
 
@@ -954,7 +969,7 @@
   }
 
   function onKeyUp(e) {
-    try { handleKeyUp(e); } catch (err) { diag('TVAK keyup error: ' + (err && err.message), 10000); }
+    try { handleKeyUp(e); } catch (err) { diag('TVAK keyup error: ' + errText(err), 20000); }
   }
 
   function handleKeyUp(e) {
@@ -972,7 +987,7 @@
 
   // ---------- Focus handling ----------
   function onFocus(e) {
-    try { handleFocus(e); } catch (err) { diag('TVAK focus error: ' + (err && err.message), 10000); }
+    try { handleFocus(e); } catch (err) { diag('TVAK focus error: ' + errText(err), 20000); }
   }
 
   function handleFocus(e) {

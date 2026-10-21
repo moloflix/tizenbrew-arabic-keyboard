@@ -7,7 +7,7 @@
   if (window.__tvakLoaded) return;
   window.__tvakLoaded = true;
 
-  var VERSION = '1.5.0';
+  var VERSION = '1.5.1';
   var CONFIG = {
     browserBar: true,       // شريط التصفح (رجوع/للأمام/تحديث/رابط) في وضع المؤشر + صفحة رئيسية
     backGoesBack: true,     // زر Back يرجع للصفحة السابقة بدل الخروج (إن لم تعالجه الصفحة)
@@ -20,6 +20,8 @@
       ['أفلام كرتون', 'https://arabic-toons.com/', 'cartoon']
     ],
     blockAds: true,         // حظر النوافذ المنبثقة وإخفاء الإعلانات المعروفة
+    blockBackTraps: true,   // يمنع صفحات الإعلانات من دفع نفس الرابط في السجل (فخ زر الرجوع)
+    backHoldMs: 800,        // ضغطة طويلة على زر الرجوع تأخذك للصفحة الرئيسية (مخرج طوارئ)
     showHint: false,         // رسالة قصيرة عند تحميل الصفحة تُظهر الإصدار (للتأكد أن الموديول يعمل)
     showKeyCodes: false,     // يعرض رمز أي زر غير معروف تضغطه (للتشخيص)
     debugBanner: false,      // شريط أحمر يعرض الإصدار ورمز كل زر والأخطاء (للتشخيص فقط)
@@ -219,6 +221,8 @@
   var refocusing = false;
   var swallowUp = {};
   var synthetic = false;
+  var backTimer = null;
+  var backHeld = false;
 
   function now() { return new Date().getTime(); }
 
@@ -1248,8 +1252,22 @@
     if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
   }
 
+  function goHome() {
+    if (ensurePointerUI()) showToast('الصفحة الرئيسية');
+    try { window.top.location.href = CONFIG.homeUrl; } catch (e) { location.href = CONFIG.homeUrl; }
+  }
+
   function onKeyDown(e) {
     try {
+      if (!synthetic && e.keyCode === 10009 && !e.repeat && CONFIG.backHoldMs > 0) {
+        if (backTimer) clearTimeout(backTimer);
+        backHeld = false;
+        backTimer = setTimeout(function () {
+          backTimer = null;
+          backHeld = true;
+          goHome();
+        }, CONFIG.backHoldMs);
+      }
       if (!synthetic) diag('key ' + e.keyCode + (e.repeat ? ' (repeat)' : ''), 2500);
       handleKeyDown(e);
     } catch (err) {
@@ -1331,6 +1349,10 @@
   }
 
   function onKeyUp(e) {
+    if (!synthetic && e.keyCode === 10009) {
+      if (backTimer) { clearTimeout(backTimer); backTimer = null; }
+      if (backHeld) { backHeld = false; eat(e); return; }
+    }
     try { handleKeyUp(e); } catch (err) { diag('TVAK keyup error: ' + errText(err), 20000); }
   }
 
@@ -1489,6 +1511,19 @@
         adBlocked();
       }
     }, true);
+    if (CONFIG.blockBackTraps) {
+      try {
+        var origPush = history.pushState;
+        history.pushState = function (st, title, url) {
+          // الفخ: دفع نفس الرابط (أو بدون رابط) مراراً حتى لا يخرج الرجوع من الصفحة
+          if (url === undefined || url === null || url === '') return;
+          var a = document.createElement('a');
+          a.href = url;
+          if (a.href === location.href) return;
+          return origPush.apply(this, arguments);
+        };
+      } catch (e4) {}
+    }
     attachAdStyle();
     if (!document.documentElement) document.addEventListener('DOMContentLoaded', attachAdStyle);
     setInterval(function () {

@@ -7,7 +7,7 @@
   if (window.__tvakLoaded) return;
   window.__tvakLoaded = true;
 
-  var VERSION = '1.4.1';
+  var VERSION = '1.4.2';
   var CONFIG = {
     browserBar: true,       // شريط التصفح (رجوع/للأمام/تحديث/رابط) في وضع المؤشر + صفحة رئيسية
     backGoesBack: true,     // زر Back يرجع للصفحة السابقة بدل الخروج (إن لم تعالجه الصفحة)
@@ -19,9 +19,9 @@
       ['أفلام أجنبية', 'https://www.fushaar.com/', 'movie'],
       ['أفلام كرتون', 'https://arabic-toons.com/', 'cartoon']
     ],
-    showHint: true,         // رسالة قصيرة عند تحميل الصفحة تُظهر الإصدار (للتأكد أن الموديول يعمل)
-    showKeyCodes: true,     // يعرض رمز أي زر غير معروف تضغطه (للتشخيص)
-    debugBanner: true,      // شريط أحمر يعرض الإصدار ورمز كل زر والأخطاء (للتشخيص فقط)
+    showHint: false,         // رسالة قصيرة عند تحميل الصفحة تُظهر الإصدار (للتأكد أن الموديول يعمل)
+    showKeyCodes: false,     // يعرض رمز أي زر غير معروف تضغطه (للتشخيص)
+    debugBanner: false,      // شريط أحمر يعرض الإصدار ورمز كل زر والأخطاء (للتشخيص فقط)
     autoOpen: true,         // افتح الكيبورد تلقائياً عند التركيز على حقل نص
     refocusFallback: false, // فعّلها (true) إذا ظهر كيبورد التلفزيون الأصلي رغم readonly/inputmode
     suppressMs: 1000        // مدة منع الفتح التلقائي بعد الإغلاق (يمنع الحلقات مع SPA)
@@ -110,12 +110,13 @@
     'background:rgba(255,255,255,0.12);color:#fff;font-size:24px;border:1px solid rgba(255,255,255,0.3);border-radius:29px;',
     'box-sizing:border-box;box-shadow:inset 0 1px 0 rgba(255,255,255,0.3);outline:none;-webkit-appearance:none;}',
     // ---- الصفحة الرئيسية (بأسلوب Brave) ----
-    '#tvak-home{all:initial;position:fixed;top:0;left:0;z-index:2147483640;display:block;box-sizing:border-box;overflow:hidden;',
+    '#tvak-home{all:initial;position:fixed;top:0;left:0;z-index:2147483640;display:-webkit-flex;display:flex;',
+    '-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;box-sizing:border-box;overflow:hidden;',
     'background-color:#0a0a14;direction:rtl;color:#fff;font-family:Arial,"Noto Sans Arabic",sans-serif;',
     '-webkit-transform-origin:0 0;transform-origin:0 0;}',
     '#tvak-home .tvak-hshade{position:absolute;left:0;top:0;right:0;bottom:0;',
     'background:linear-gradient(rgba(0,0,0,0.32),rgba(0,0,0,0.08) 45%,rgba(0,0,0,0.5));}',
-    '#tvak-home .tvak-hcol{position:relative;display:block;padding-top:170px;text-align:center;}',
+    '#tvak-home .tvak-hcol{position:relative;display:block;width:100%;padding-top:96px;text-align:center;}',
     '#tvak-home .tvak-hclock{display:block;font-size:132px;font-weight:300;letter-spacing:3px;direction:ltr;text-shadow:0 6px 36px rgba(0,0,0,0.55);}',
     '#tvak-home .tvak-hdate{display:block;font-size:30px;opacity:0.88;margin-bottom:52px;text-shadow:0 2px 16px rgba(0,0,0,0.6);}',
     '#tvak-home .tvak-hsearch{display:block;box-sizing:border-box;width:900px;height:86px;margin:0 auto 64px;padding:0 44px;',
@@ -123,17 +124,17 @@
     'border-radius:43px;-webkit-backdrop-filter:blur(26px) saturate(170%);backdrop-filter:blur(26px) saturate(170%);',
     'box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 12px 40px rgba(0,0,0,0.35);outline:none;-webkit-appearance:none;}',
     '#tvak-home .tvak-hgrid{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:center;justify-content:center;}',
-    '#tvak-home .tvak-fav{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;',
-    '-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;',
+    '#tvak-home .tvak-fav{display:-webkit-flex;display:flex;',
     'width:210px;height:210px;margin:18px;border-radius:44px;box-sizing:border-box;',
     'background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);',
     '-webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%);',
     'box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 14px 38px rgba(0,0,0,0.35);}',
+    '#tvak-home .tvak-finner{display:block;margin:auto;text-align:center;}',
     '#tvak-home .tvak-ficon{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;',
-    '-webkit-justify-content:center;justify-content:center;width:108px;height:108px;border-radius:54px;margin-bottom:14px;',
+    '-webkit-justify-content:center;justify-content:center;width:108px;height:108px;border-radius:54px;margin:0 auto 14px;',
     'font-size:46px;font-weight:bold;color:#fff;border:1px solid rgba(255,255,255,0.4);',
     'box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);}',
-    '#tvak-home .tvak-ficon svg{display:block;width:60px;height:60px;}',
+    '#tvak-home .tvak-ficon svg{display:block;width:60px;height:60px;margin:auto;}',
     '#tvak-home .tvak-flabel{display:block;font-size:26px;text-shadow:0 2px 10px rgba(0,0,0,0.5);}',
     // ---- تمييز العنصر تحت المؤشر ----
     '#tvak-home .tvak-hsearch::-webkit-input-placeholder{color:rgba(255,255,255,0.82);}',
@@ -1214,8 +1215,10 @@
           ic.textContent = String(f[0]).charAt(0).toUpperCase();
           ic.style.background = tileColor(idx);
         }
-        c.appendChild(ic);
-        c.appendChild(mkEl('div', 'tvak-flabel', f[0]));
+        var inner = mkEl('div', 'tvak-finner');
+        inner.appendChild(ic);
+        inner.appendChild(mkEl('div', 'tvak-flabel', f[0]));
+        c.appendChild(inner);
         c.addEventListener('click', function () { location.href = f[1]; });
         grid.appendChild(c);
       })(CONFIG.favorites[i], i);

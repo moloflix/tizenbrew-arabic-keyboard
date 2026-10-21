@@ -7,7 +7,7 @@
   if (window.__tvakLoaded) return;
   window.__tvakLoaded = true;
 
-  var VERSION = '1.5.1';
+  var VERSION = '1.5.2';
   var CONFIG = {
     browserBar: true,       // شريط التصفح (رجوع/للأمام/تحديث/رابط) في وضع المؤشر + صفحة رئيسية
     backGoesBack: true,     // زر Back يرجع للصفحة السابقة بدل الخروج (إن لم تعالجه الصفحة)
@@ -19,6 +19,7 @@
       ['أفلام أجنبية', 'https://www.fushaar.com/', 'movie'],
       ['أفلام كرتون', 'https://arabic-toons.com/', 'cartoon']
     ],
+    barTop: 56,             // المسافة بين شريط التصفح وأعلى الشاشة (بوحدات 1080p) لتفادي قص أطراف الشاشة
     blockAds: true,         // حظر النوافذ المنبثقة وإخفاء الإعلانات المعروفة
     blockBackTraps: true,   // يمنع صفحات الإعلانات من دفع نفس الرابط في السجل (فخ زر الرجوع)
     backHoldMs: 800,        // ضغطة طويلة على زر الرجوع تأخذك للصفحة الرئيسية (مخرج طوارئ)
@@ -100,7 +101,7 @@
     // ---- شريط التصفح (زجاج) ----
     '#tvak-bar{all:initial;position:fixed;top:0;left:0;z-index:2147483646;display:none;box-sizing:border-box;',
     'background:rgba(14,14,22,0.5);-webkit-backdrop-filter:blur(30px) saturate(170%);backdrop-filter:blur(30px) saturate(170%);',
-    'border-bottom:1px solid rgba(255,255,255,0.2);padding:12px 20px;direction:ltr;',
+    'border:1px solid rgba(255,255,255,0.28);border-radius:46px;box-shadow:0 14px 40px rgba(0,0,0,0.38);padding:12px 24px;direction:ltr;',
     'font-family:Arial,"Noto Sans Arabic",sans-serif;-webkit-transform-origin:0 0;transform-origin:0 0;}',
     '#tvak-bar.tvak-on{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;}',
     '#tvak-bar .tvak-bbtn{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;',
@@ -1145,9 +1146,21 @@
     return true;
   }
 
+  function layoutBar() {
+    var s = uiScale();
+    var w = window.innerWidth || 1920;
+    var side = 48 * s;
+    bar.style.left = Math.round(side) + 'px';
+    bar.style.top = Math.round(CONFIG.barTop * s) + 'px';
+    bar.style.width = Math.round((w - side * 2) / s) + 'px';
+    var tf = 'scale(' + s + ')';
+    bar.style.webkitTransform = tf;
+    bar.style.transform = tf;
+  }
+
   function showBar() {
     if (!CONFIG.browserBar || !ensureBar()) return;
-    scaleBox(bar);
+    layoutBar();
     if (urlInput && !state.open) urlInput.value = location.href;
     bar.className = 'tvak-on';
   }

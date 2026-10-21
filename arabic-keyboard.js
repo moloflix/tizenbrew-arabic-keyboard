@@ -7,18 +7,16 @@
   if (window.__tvakLoaded) return;
   window.__tvakLoaded = true;
 
-  var VERSION = '1.3.0';
+  var VERSION = '1.3.1';
   var CONFIG = {
     browserBar: true,       // شريط التصفح (رجوع/للأمام/تحديث/رابط) في وضع المؤشر + صفحة رئيسية
     backGoesBack: true,     // زر Back يرجع للصفحة السابقة بدل الخروج (إن لم تعالجه الصفحة)
     homeUrl: 'https://example.com/?tvak=home',
     favorites: [            // المواقع المفضلة في الصفحة الرئيسية: [الاسم، الرابط]
       ['Google', 'https://www.google.com'],
-      ['YouTube', 'https://www.youtube.com'],
-      ['ويكيبيديا', 'https://ar.wikipedia.org'],
-      ['الجزيرة نت', 'https://www.aljazeera.net'],
-      ['BBC عربي', 'https://www.bbc.com/arabic'],
-      ['Bing', 'https://www.bing.com']
+      ['Laaroza', 'https://laaroza.casa/home.24'],
+      ['Fushaar', 'https://www.fushaar.com/'],
+      ['Arabic Toons', 'https://arabic-toons.com/']
     ],
     showHint: true,         // رسالة قصيرة عند تحميل الصفحة تُظهر الإصدار (للتأكد أن الموديول يعمل)
     showKeyCodes: true,     // يعرض رمز أي زر غير معروف تضغطه (للتشخيص)

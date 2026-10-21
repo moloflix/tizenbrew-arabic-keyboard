@@ -7,14 +7,44 @@
   if (window.__tvakLoaded) return;
   window.__tvakLoaded = true;
 
-  var VERSION = '1.2.1';
+  var VERSION = '1.2.2';
   var CONFIG = {
     showHint: true,         // رسالة قصيرة عند تحميل الصفحة تُظهر الإصدار (للتأكد أن الموديول يعمل)
     showKeyCodes: true,     // يعرض رمز أي زر غير معروف تضغطه (للتشخيص)
+    debugBanner: true,      // شريط أحمر يعرض الإصدار ورمز كل زر والأخطاء (للتشخيص فقط)
     autoOpen: true,         // افتح الكيبورد تلقائياً عند التركيز على حقل نص
     refocusFallback: false, // فعّلها (true) إذا ظهر كيبورد التلفزيون الأصلي رغم readonly/inputmode
     suppressMs: 1000        // مدة منع الفتح التلقائي بعد الإغلاق (يمنع الحلقات مع SPA)
   };
+
+  // ---------- تشخيص مستقل (inline styles فقط، لا يعتمد على بقية الكود) ----------
+  var diagTimer = null;
+  function diag(text, ms) {
+    if (!CONFIG.debugBanner) return;
+    try {
+      var host = document.body || document.documentElement;
+      if (!host) return;
+      var d = document.getElementById('tvak-diag');
+      if (!d) {
+        d = document.createElement('div');
+        d.id = 'tvak-diag';
+        d.style.cssText = 'position:fixed;top:12px;left:12px;right:12px;z-index:2147483647;background:#c00;color:#fff;' +
+          'font:bold 30px Arial,sans-serif;padding:12px 20px;border-radius:8px;pointer-events:none;direction:ltr;text-align:left;';
+      }
+      if (d.parentNode !== host) host.appendChild(d);
+      d.textContent = text;
+      d.style.display = 'block';
+      if (diagTimer) clearTimeout(diagTimer);
+      diagTimer = setTimeout(function () { d.style.display = 'none'; }, ms || 4000);
+    } catch (e) {}
+  }
+  diag('TVAK v' + VERSION + ' loaded', 6000);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { diag('TVAK v' + VERSION + ' ready', 6000); });
+  }
+  window.addEventListener('error', function (e) {
+    if (!e.filename) diag('TVAK error: ' + e.message + ' @' + e.lineno, 10000);
+  });
 
   // ---------- CSS (مضمّن لأن TizenBrew يحقن ملف JS واحد فقط) ----------
   // ملاحظة: بدون flex gap ولا CSS variables لتوافق المتصفحات القديمة.
@@ -842,6 +872,15 @@
   }
 
   function onKeyDown(e) {
+    try {
+      if (!synthetic) diag('key ' + e.keyCode + (e.repeat ? ' (repeat)' : ''), 2500);
+      handleKeyDown(e);
+    } catch (err) {
+      diag('TVAK keydown error: ' + (err && err.message), 10000);
+    }
+  }
+
+  function handleKeyDown(e) {
     if (synthetic) return;
     var code = e.keyCode;
 
@@ -915,6 +954,10 @@
   }
 
   function onKeyUp(e) {
+    try { handleKeyUp(e); } catch (err) { diag('TVAK keyup error: ' + (err && err.message), 10000); }
+  }
+
+  function handleKeyUp(e) {
     if (synthetic) return;
     if (e.keyCode === 13) {
       if (ptr.holdTimer) { clearTimeout(ptr.holdTimer); ptr.holdTimer = null; }
@@ -929,6 +972,10 @@
 
   // ---------- Focus handling ----------
   function onFocus(e) {
+    try { handleFocus(e); } catch (err) { diag('TVAK focus error: ' + (err && err.message), 10000); }
+  }
+
+  function handleFocus(e) {
     var el = e.target;
     if (!isTextField(el)) {
       if (state.open && el && el.nodeType === 1 && el !== document.body && el !== document.documentElement) {

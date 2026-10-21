@@ -1,13 +1,16 @@
 {
   "name": "tizenbrew-arabic-keyboard",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "كيبورد عربي على الشاشة لمتصفح التلفزيون، يتحكم فيه بالريموت | On-screen Arabic keyboard for the TV browser, remote-controlled",
   "packageType": "mods",
   "appName": "Arabic Keyboard",
   "websiteURL": "https://www.google.com",
   "main": "arabic-keyboard.js",
   "keys": [
-    "ColorF0Red"
+    "ColorF0Red",
+    "ColorF1Green",
+    "ColorF2Yellow",
+    "ColorF3Blue"
   ],
   "license": "MIT",
   "author": "moloflix",

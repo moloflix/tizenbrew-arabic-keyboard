@@ -7,7 +7,10 @@
   if (window.__tvakLoaded) return;
   window.__tvakLoaded = true;
 
+  var VERSION = '1.2.1';
   var CONFIG = {
+    showHint: true,         // رسالة قصيرة عند تحميل الصفحة تُظهر الإصدار (للتأكد أن الموديول يعمل)
+    showKeyCodes: true,     // يعرض رمز أي زر غير معروف تضغطه (للتشخيص)
     autoOpen: true,         // افتح الكيبورد تلقائياً عند التركيز على حقل نص
     refocusFallback: false, // فعّلها (true) إذا ظهر كيبورد التلفزيون الأصلي رغم readonly/inputmode
     suppressMs: 1000        // مدة منع الفتح التلقائي بعد الإغلاق (يمنع الحلقات مع SPA)
@@ -17,7 +20,7 @@
   // ملاحظة: بدون flex gap ولا CSS variables لتوافق المتصفحات القديمة.
   var TVAK_CSS = [
     '#tvak-root{all:initial;position:fixed;left:0;bottom:0;z-index:2147483647;display:none;',
-    'box-sizing:border-box;background:rgba(24,24,26,0.97);border-top:1px solid #4a4a4f;',
+    'direction:ltr;unicode-bidi:normal;box-sizing:border-box;background:rgba(24,24,26,0.97);border-top:1px solid #4a4a4f;',
     'padding:14px 28px 12px;font-family:Arial,"Noto Sans Arabic",sans-serif;',
     '-webkit-transform-origin:0 100%;transform-origin:0 100%;}',
     '#tvak-root.tvak-open{display:block;}',
@@ -212,7 +215,10 @@
           if (key === '{tashkeel}' && state.tashkeel) k.className += ' tvak-on';
         }
         k.textContent = labelOf(key);
-        rowEl.appendChild(k);
+        // الترتيب البصري صريح (لا نعتمد على دعم direction في متصفح التلفزيون):
+        // في العربي أول مفتاح منطقياً يكون أقصى اليمين
+        if (DIRS[state.mode] === 'rtl') rowEl.insertBefore(k, rowEl.firstChild);
+        else rowEl.appendChild(k);
         els.push(k);
       }
       root.appendChild(rowEl);
@@ -239,7 +245,9 @@
       }
     }
     txt = txt.replace(/\n/g, ' ');
-    previewEl.setAttribute('dir', el.getAttribute('dir') || 'auto');
+    var pr = el.getAttribute('dir') === 'rtl';
+    previewEl.style.direction = pr ? 'rtl' : 'ltr';
+    previewEl.style.textAlign = pr ? 'right' : 'left';
     previewEl.textContent = txt.slice(0, pos) + '|' + txt.slice(pos);
   }
 
@@ -593,7 +601,7 @@
   }
 
   // ---------- Pointer mode (مؤشر ماوس افتراضي للريموت) ----------
-  var PTR_TOGGLE = [403]; // الزر الأحمر (مسجّل في keys داخل package.json)
+  var PTR_TOGGLE = [403, 404, 405, 406]; // الأحمر/الأخضر/الأصفر/الأزرق (مسجّلة في keys داخل package.json)
   var ptr = {
     on: false, placed: false, x: 0, y: 0, count: 0, hover: null,
     el: null, toast: null, toastTimer: null, holdTimer: null, holdFired: false,
@@ -838,7 +846,10 @@
     var code = e.keyCode;
 
     if (!state.open) {
-      // الزر الأحمر: تشغيل/إيقاف وضع المؤشر
+      if (CONFIG.showKeyCodes && !ptr.on && [37, 38, 39, 40, 13, 10009].indexOf(code) === -1 && PTR_TOGGLE.indexOf(code) === -1) {
+        if (ensurePointerUI()) showToast('رمز المفتاح: ' + code);
+      }
+      // الألوان: تشغيل/إيقاف وضع المؤشر
       if (PTR_TOGGLE.indexOf(code) !== -1) {
         eat(e);
         swallowUp[code] = true;
@@ -955,7 +966,14 @@
   document.addEventListener('blur', onBlur, true);
 
   // حقل أخذ التركيز (autofocus) قبل تسجيل المستمعات
+  function hello() {
+    if (CONFIG.showHint && ensurePointerUI()) {
+      showToast('الكيبورد العربي v' + VERSION + ' جاهز · أحمر أو OK مطوّلة = مؤشر');
+    }
+  }
+
   function checkInitialFocus() {
+    hello();
     var a = document.activeElement;
     if (a && isTextField(a)) onFocus({ target: a });
   }

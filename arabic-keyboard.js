@@ -34,7 +34,13 @@
     '#tvak-root .tvak-space{-webkit-flex:1;flex:1;max-width:460px;font-size:22px;background:#3a3a3e;}',
     '#tvak-root .tvak-action{background:#2f7bff;color:#fff;}',
     '#tvak-root .tvak-on{background:#1f5f43;}',
-    '#tvak-root .tvak-active{background:#fff;color:#111;border-color:#2f7bff;box-shadow:0 0 0 3px rgba(47,123,255,0.8);}'
+    '#tvak-root .tvak-active{background:#fff;color:#111;border-color:#2f7bff;box-shadow:0 0 0 3px rgba(47,123,255,0.8);}',
+    '#tvak-cursor{all:initial;position:fixed;left:0;top:0;z-index:2147483647;pointer-events:none;display:none;}',
+    '#tvak-cursor.tvak-on{display:block;}',
+    '#tvak-toast{all:initial;position:fixed;top:24px;left:50%;z-index:2147483647;pointer-events:none;display:none;',
+    'background:rgba(20,20,22,0.92);color:#fff;font-family:Arial,"Noto Sans Arabic",sans-serif;font-size:26px;',
+    'padding:12px 24px;border-radius:10px;-webkit-transform:translateX(-50%);transform:translateX(-50%);white-space:nowrap;}',
+    '#tvak-toast.tvak-on{display:block;}'
   ].join('');
 
   // ---------- Layouts ----------
@@ -175,9 +181,7 @@
     if (!root) return;
     var w = window.innerWidth || document.documentElement.clientWidth || 1920;
     var h = window.innerHeight || document.documentElement.clientHeight || 1080;
-    var s = Math.min(w / 1920, h / 1080); // 1080p => 1، 4K (3840x2160) => 2
-    if (s < 0.3) s = 0.3;
-    if (s > 2.5) s = 2.5;
+    var s = uiScale();
     root.style.width = Math.round(w / s) + 'px';
     var tf = 'scale(' + s + ')';
     root.style.webkitTransform = tf;
@@ -588,6 +592,240 @@
     }
   }
 
+  // ---------- Pointer mode (مؤشر ماوس افتراضي للريموت) ----------
+  var PTR_TOGGLE = [403]; // الزر الأحمر (مسجّل في keys داخل package.json)
+  var ptr = {
+    on: false, placed: false, x: 0, y: 0, count: 0, hover: null,
+    el: null, toast: null, toastTimer: null, holdTimer: null, holdFired: false,
+    ignoreOk: false, fromParent: false, waitTimer: null
+  };
+
+  function uiScale() {
+    var w = window.innerWidth || document.documentElement.clientWidth || 1920;
+    var h = window.innerHeight || document.documentElement.clientHeight || 1080;
+    var s = Math.min(w / 1920, h / 1080); // 1080p => 1، 4K (3840x2160) => 2
+    if (s < 0.3) s = 0.3;
+    if (s > 2.5) s = 2.5;
+    return s;
+  }
+
+  function ensurePointerUI() {
+    if (!ensureUI()) return false;
+    if (!ptr.el) {
+      ptr.el = document.createElement('div');
+      ptr.el.id = 'tvak-cursor';
+      ptr.el.innerHTML = '<svg width="100%" height="100%" viewBox="0 0 24 24">' +
+        '<path d="M3 2 L3 19 L7.5 14.8 L10.5 21.5 L13.2 20.3 L10.2 13.8 L16.5 13.8 Z" ' +
+        'fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+      ptr.toast = document.createElement('div');
+      ptr.toast.id = 'tvak-toast';
+    }
+    var host = document.body || document.documentElement;
+    if (ptr.el.parentNode !== host) host.appendChild(ptr.el);
+    if (ptr.toast.parentNode !== host) host.appendChild(ptr.toast);
+    return true;
+  }
+
+  function showToast(text) {
+    if (!ptr.toast) return;
+    ptr.toast.textContent = text;
+    ptr.toast.className = 'tvak-on';
+    if (ptr.toastTimer) clearTimeout(ptr.toastTimer);
+    ptr.toastTimer = setTimeout(function () { ptr.toast.className = ''; }, 2500);
+  }
+
+  function positionCursor() {
+    if (!ptr.el) return;
+    var size = Math.round(38 * uiScale());
+    ptr.el.style.width = size + 'px';
+    ptr.el.style.height = size + 'px';
+    ptr.el.style.left = Math.round(ptr.x - size * 0.12) + 'px';
+    ptr.el.style.top = Math.round(ptr.y - size * 0.08) + 'px';
+  }
+
+  function elAt() {
+    try { return document.elementFromPoint(ptr.x, ptr.y); } catch (e) { return null; }
+  }
+
+  function mouseEv(type, el) {
+    var ev;
+    try {
+      ev = new MouseEvent(type, {
+        bubbles: true, cancelable: true, view: window,
+        clientX: ptr.x, clientY: ptr.y, button: 0, buttons: type === 'mousedown' ? 1 : 0
+      });
+    } catch (e) {
+      ev = document.createEvent('MouseEvents');
+      ev.initMouseEvent(type, true, true, window, 0, 0, 0, ptr.x, ptr.y, false, false, false, false, 0, null);
+    }
+    el.dispatchEvent(ev);
+  }
+
+  function pointerEv(type, el) {
+    if (typeof window.PointerEvent !== 'function') return;
+    try {
+      el.dispatchEvent(new PointerEvent(type, {
+        bubbles: true, cancelable: true, view: window, clientX: ptr.x, clientY: ptr.y,
+        pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: type === 'pointerdown' ? 1 : 0
+      }));
+    } catch (e) {}
+  }
+
+  function doHover() {
+    var el = elAt();
+    if (!el) return;
+    if (el !== ptr.hover) {
+      if (ptr.hover) mouseEv('mouseout', ptr.hover);
+      mouseEv('mouseover', el);
+      ptr.hover = el;
+    }
+    mouseEv('mousemove', el);
+  }
+
+  function scrollAt(dx, dy) {
+    var n = elAt();
+    while (n && n.nodeType === 1 && n !== document.body && n !== document.documentElement) {
+      var cs = window.getComputedStyle(n);
+      var before;
+      if (dy && (cs.overflowY === 'auto' || cs.overflowY === 'scroll') && n.scrollHeight > n.clientHeight) {
+        before = n.scrollTop; n.scrollTop += dy;
+        if (n.scrollTop !== before) return;
+      }
+      if (dx && (cs.overflowX === 'auto' || cs.overflowX === 'scroll') && n.scrollWidth > n.clientWidth) {
+        before = n.scrollLeft; n.scrollLeft += dx;
+        if (n.scrollLeft !== before) return;
+      }
+      n = n.parentNode;
+    }
+    window.scrollBy(dx, dy);
+  }
+
+  function movePointer(dx, dy, step) {
+    var w = window.innerWidth || 1920;
+    var h = window.innerHeight || 1080;
+    var m = 6;
+    var nx = ptr.x + dx * step;
+    var ny = ptr.y + dy * step;
+    // عند الحافة نمرّر الصفحة (أو الحاوية تحت المؤشر)
+    if (ny < m && dy < 0) scrollAt(0, -step * 2);
+    else if (ny > h - m && dy > 0) scrollAt(0, step * 2);
+    if (nx < m && dx < 0) scrollAt(-step * 2, 0);
+    else if (nx > w - m && dx > 0) scrollAt(step * 2, 0);
+    ptr.x = Math.max(m, Math.min(w - m, nx));
+    ptr.y = Math.max(m, Math.min(h - m, ny));
+    positionCursor();
+    doHover();
+  }
+
+  function textFieldAbove(el) {
+    var n = el;
+    for (var i = 0; i < 5 && n; i++) {
+      if (n.nodeType === 1 && isTextField(n)) return n;
+      n = n.parentNode;
+    }
+    return null;
+  }
+
+  function handoffToFrame(frame) {
+    var r = frame.getBoundingClientRect();
+    try {
+      frame.contentWindow.postMessage({ tvak: 'ptr', x: ptr.x - r.left, y: ptr.y - r.top }, '*');
+    } catch (e) { return; }
+    try { frame.focus(); } catch (e2) {}
+    exitPointer(false);
+    // إن لم يرد الإطار (لا يحمل السكربت) نستعيد المؤشر هنا
+    ptr.waitTimer = setTimeout(function () {
+      ptr.waitTimer = null;
+      try { window.focus(); } catch (e3) {}
+      enterPointer();
+      showToast('هذا الإطار لا يدعم المؤشر');
+    }, 700);
+  }
+
+  function clickPointer() {
+    var el = elAt();
+    if (!el) return;
+    var tag = el.tagName ? el.tagName.toLowerCase() : '';
+    if (tag === 'iframe' || tag === 'frame') { handoffToFrame(el); return; }
+    pointerEv('pointerdown', el);
+    mouseEv('mousedown', el);
+    var field = textFieldAbove(el);
+    if (field) { try { field.focus(); } catch (e) {} }
+    pointerEv('pointerup', el);
+    mouseEv('mouseup', el);
+    if (typeof el.click === 'function') el.click(); else mouseEv('click', el);
+  }
+
+  function enterPointer(x, y) {
+    if (state.open) closeKeyboard();
+    if (!ensurePointerUI()) return;
+    var w = window.innerWidth || 1920;
+    var h = window.innerHeight || 1080;
+    if (typeof x === 'number') { ptr.x = x; ptr.y = y; }
+    else if (!ptr.placed) { ptr.x = w / 2; ptr.y = h / 2; }
+    ptr.x = Math.max(6, Math.min(w - 6, ptr.x));
+    ptr.y = Math.max(6, Math.min(h - 6, ptr.y));
+    ptr.placed = true;
+    ptr.on = true;
+    ptr.el.className = 'tvak-on';
+    positionCursor();
+    showToast('وضع المؤشر: الأسهم للتحريك، OK للنقر، Back للخروج');
+    if (ptr.fromParent) {
+      try { window.parent.postMessage({ tvak: 'ptr-ack' }, '*'); } catch (e) {}
+    }
+  }
+
+  function exitPointer(notifyParent) {
+    ptr.on = false;
+    ptr.count = 0;
+    if (ptr.el) ptr.el.className = '';
+    if (ptr.hover) { try { mouseEv('mouseout', ptr.hover); } catch (e) {} ptr.hover = null; }
+    if (notifyParent !== false && ptr.fromParent) {
+      ptr.fromParent = false;
+      try { window.parent.postMessage({ tvak: 'ptr-back' }, '*'); } catch (e2) {}
+    }
+  }
+
+  // يعيد true إن عولج المفتاح
+  function onPointerKey(e, code) {
+    if (PTR_TOGGLE.indexOf(code) !== -1 || KEY_BACK.indexOf(code) !== -1) {
+      if (!e.repeat) exitPointer();
+      return true;
+    }
+    var dx = 0, dy = 0;
+    if (code === 37) dx = -1;
+    else if (code === 39) dx = 1;
+    else if (code === 38) dy = -1;
+    else if (code === 40) dy = 1;
+    if (dx || dy) {
+      ptr.count = e.repeat ? Math.min(ptr.count + 1, 20) : 0; // تسارع عند الضغط المستمر
+      var base = 14 * Math.max(0.6, (window.innerWidth || 1920) / 1920);
+      movePointer(dx, dy, base + ptr.count * 4);
+      return true;
+    }
+    if (code === 13) {
+      if (!e.repeat && !ptr.ignoreOk) clickPointer();
+      return true;
+    }
+    return false;
+  }
+
+  function onMessage(e) {
+    var d = e.data;
+    if (!d || typeof d !== 'object' || !d.tvak) return;
+    if (d.tvak === 'ptr' && e.source === window.parent) {
+      ptr.fromParent = true;
+      try { window.focus(); } catch (x) {}
+      enterPointer(d.x, d.y);
+    } else if (d.tvak === 'ptr-ack') {
+      if (ptr.waitTimer) { clearTimeout(ptr.waitTimer); ptr.waitTimer = null; }
+    } else if (d.tvak === 'ptr-back' && e.source !== window) {
+      try { window.focus(); } catch (y) {}
+      ptr.fromParent = false;
+      enterPointer();
+    }
+  }
+
   // ---------- Remote control ----------
   function eat(e) {
     e.preventDefault();
@@ -600,11 +838,34 @@
     var code = e.keyCode;
 
     if (!state.open) {
-      // OK على حقل نص: افتح الكيبورد صراحةً (يتجاوز منع الفتح التلقائي)
-      if (code === 13 && isTextField(document.activeElement)) {
+      // الزر الأحمر: تشغيل/إيقاف وضع المؤشر
+      if (PTR_TOGGLE.indexOf(code) !== -1) {
         eat(e);
         swallowUp[code] = true;
-        if (!e.repeat) openKeyboard(document.activeElement, true);
+        if (!e.repeat) { if (ptr.on) exitPointer(); else enterPointer(); }
+        return;
+      }
+      if (ptr.on) {
+        if (onPointerKey(e, code)) { swallowUp[code] = true; eat(e); }
+        return;
+      }
+      if (code === 13) {
+        if (isTextField(document.activeElement)) {
+          // OK على حقل نص: افتح الكيبورد صراحةً (يتجاوز منع الفتح التلقائي)
+          eat(e);
+          swallowUp[code] = true;
+          if (!e.repeat) openKeyboard(document.activeElement, true);
+        } else if (!e.repeat) {
+          // بديل عن الزر الأحمر: ضغطة طويلة على OK تشغّل المؤشر
+          if (ptr.holdTimer) clearTimeout(ptr.holdTimer);
+          ptr.holdFired = false;
+          ptr.holdTimer = setTimeout(function () {
+            ptr.holdTimer = null;
+            ptr.holdFired = true;
+            ptr.ignoreOk = true;
+            enterPointer();
+          }, 800);
+        }
       }
       return;
     }
@@ -644,6 +905,11 @@
 
   function onKeyUp(e) {
     if (synthetic) return;
+    if (e.keyCode === 13) {
+      if (ptr.holdTimer) { clearTimeout(ptr.holdTimer); ptr.holdTimer = null; }
+      ptr.ignoreOk = false;
+      if (ptr.holdFired) { ptr.holdFired = false; eat(e); return; }
+    }
     if (swallowUp[e.keyCode]) {
       delete swallowUp[e.keyCode];
       eat(e);
@@ -684,6 +950,7 @@
   window.addEventListener('keydown', onKeyDown, true);
   window.addEventListener('keyup', onKeyUp, true);
   window.addEventListener('resize', onResize);
+  window.addEventListener('message', onMessage, false);
   document.addEventListener('focus', onFocus, true);
   document.addEventListener('blur', onBlur, true);
 

@@ -7,7 +7,7 @@
   if (window.__tvakLoaded) return;
   window.__tvakLoaded = true;
 
-  var VERSION = '1.2.3';
+  var VERSION = '1.2.4';
   var CONFIG = {
     showHint: true,         // رسالة قصيرة عند تحميل الصفحة تُظهر الإصدار (للتأكد أن الموديول يعمل)
     showKeyCodes: true,     // يعرض رمز أي زر غير معروف تضغطه (للتشخيص)
@@ -228,7 +228,7 @@
   function render() {
     var rows = getRows();
     root.setAttribute('dir', DIRS[state.mode]);
-    root.innerHTML = '';
+    while (root.firstChild) root.removeChild(root.firstChild); // بدون innerHTML (Trusted Types)
     keyEls = [];
     previewEl = document.createElement('div');
     previewEl.className = 'tvak-preview';
@@ -664,13 +664,26 @@
       var c = document.createElement('div');
       c.id = 'tvak-cursor';
       try {
-        c.innerHTML = '<svg width="100%" height="100%" viewBox="0 0 24 24">' +
-          '<path d="M3 2 L3 19 L7.5 14.8 L10.5 21.5 L13.2 20.3 L10.2 13.8 L16.5 13.8 Z" ' +
-          'fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+        // createElementNS بدل innerHTML: بعض المواقع (Google) تفرض Trusted Types فتمنع innerHTML
+        var ns = 'http://www.w3.org/2000/svg';
+        var svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '100%');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        var path = document.createElementNS(ns, 'path');
+        path.setAttribute('d', 'M3 2 L3 19 L7.5 14.8 L10.5 21.5 L13.2 20.3 L10.2 13.8 L16.5 13.8 Z');
+        path.setAttribute('fill', '#fff');
+        path.setAttribute('stroke', '#000');
+        path.setAttribute('stroke-width', '1.5');
+        path.setAttribute('stroke-linejoin', 'round');
+        svg.appendChild(path);
+        c.appendChild(svg);
       } catch (e) {
-        c.textContent = '➤'; // بديل نصي إن فشل SVG
+        c.textContent = '➤'; // بديل نصي (يشير لأعلى اليسار بعد التدوير)
         c.style.color = '#fff';
         c.style.fontSize = '36px';
+        c.style.webkitTransform = 'rotate(-135deg)';
+        c.style.transform = 'rotate(-135deg)';
       }
       ptr.el = c;
     }
@@ -799,6 +812,9 @@
     var el = elAt();
     if (!el) return;
     var tag = el.tagName ? el.tagName.toLowerCase() : '';
+    diag('click ' + tag + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' +
+      el.className.split(' ')[0] : '') + ' "' + String(el.textContent || '').replace(/\s+/g, ' ').slice(0, 24) +
+      '" @' + Math.round(ptr.x) + ',' + Math.round(ptr.y) + ' of ' + window.innerWidth + 'x' + window.innerHeight, 5000);
     if (tag === 'iframe' || tag === 'frame') { handoffToFrame(el); return; }
     pointerEv('pointerdown', el);
     mouseEv('mousedown', el);

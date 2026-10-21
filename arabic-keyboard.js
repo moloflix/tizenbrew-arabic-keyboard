@@ -17,20 +17,24 @@
   // ملاحظة: بدون flex gap ولا CSS variables لتوافق المتصفحات القديمة.
   var TVAK_CSS = [
     '#tvak-root{all:initial;position:fixed;left:0;bottom:0;z-index:2147483647;display:none;',
-    'box-sizing:border-box;background:rgba(18,18,24,0.97);border-top:2px solid #3a3a4a;',
-    'padding:14px 24px 10px;font-family:Arial,"Noto Sans Arabic",sans-serif;',
+    'box-sizing:border-box;background:rgba(24,24,26,0.97);border-top:1px solid #4a4a4f;',
+    'padding:14px 28px 12px;font-family:Arial,"Noto Sans Arabic",sans-serif;',
     '-webkit-transform-origin:0 100%;transform-origin:0 100%;}',
     '#tvak-root.tvak-open{display:block;}',
+    '#tvak-root .tvak-preview{display:block;box-sizing:border-box;margin:0 auto 12px;max-width:1100px;height:56px;',
+    'line-height:56px;padding:0 20px;background:#0e0e10;color:#f2f2f4;font-size:28px;border-radius:8px;',
+    'border-bottom:3px solid #2f7bff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}',
     '#tvak-root .tvak-row{display:-webkit-flex;display:flex;-webkit-justify-content:center;justify-content:center;margin-bottom:8px;}',
     '#tvak-root .tvak-key{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;',
-    '-webkit-justify-content:center;justify-content:center;min-width:64px;height:64px;padding:0 14px;margin:0 4px;',
-    'background:#2b2b38;color:#fff;font-size:30px;line-height:1;border-radius:10px;box-sizing:border-box;',
-    'font-family:Arial,"Noto Sans Arabic",sans-serif;}',
-    '#tvak-root .tvak-wide{min-width:110px;font-size:24px;}',
-    '#tvak-root .tvak-space{-webkit-flex:1;flex:1;max-width:520px;font-size:22px;}',
-    '#tvak-root .tvak-action{background:#3b4a7a;}',
-    '#tvak-root .tvak-on{background:#2f6b4a;}',
-    '#tvak-root .tvak-active{background:#ffcc00;color:#000;-webkit-transform:scale(1.08);transform:scale(1.08);}'
+    '-webkit-justify-content:center;justify-content:center;min-width:68px;height:68px;padding:0 14px;margin:0 4px;',
+    'background:#3a3a3e;color:#ececee;font-size:30px;line-height:1;border-radius:8px;box-sizing:border-box;',
+    'font-family:Arial,"Noto Sans Arabic",sans-serif;border:2px solid transparent;}',
+    '#tvak-root .tvak-wide{min-width:104px;font-size:24px;background:#2b2b2e;}',
+    '#tvak-root .tvak-arrow{min-width:84px;font-size:34px;}',
+    '#tvak-root .tvak-space{-webkit-flex:1;flex:1;max-width:460px;font-size:22px;background:#3a3a3e;}',
+    '#tvak-root .tvak-action{background:#2f7bff;color:#fff;}',
+    '#tvak-root .tvak-on{background:#1f5f43;}',
+    '#tvak-root .tvak-active{background:#fff;color:#111;border-color:#2f7bff;box-shadow:0 0 0 3px rgba(47,123,255,0.8);}'
   ].join('');
 
   // ---------- Layouts ----------
@@ -65,7 +69,9 @@
     '{num}': '123',
     '{abc}': 'ا ب ت',
     '{lang}': 'EN / ع',
-    '{tashkeel}': 'تشكيل'
+    '{tashkeel}': 'تشكيل',
+    '{left}': '←',
+    '{right}': '→'
   };
 
   var KEY_BACK = [10009, 27]; // Tizen Back + Esc (للتجربة على الكمبيوتر)
@@ -96,6 +102,7 @@
   var root = null;
   var styleEl = null;
   var keyEls = [];
+  var previewEl = null;
   var observer = null;
   var resolveTimer = null;
   var refocusing = false;
@@ -132,9 +139,9 @@
     var rows = LETTERS[m].slice(0);
     var bottom;
     if (m === 'ar' && state.tashkeel) rows.push(DIACRITICS);
-    if (m === 'num') bottom = ['{abc}', '{lang}', '{space}', '{bksp}', '{enter}', '{close}'];
-    else if (m === 'ar') bottom = ['{num}', '{lang}', '{tashkeel}', '{space}', '{bksp}', '{enter}', '{close}'];
-    else bottom = ['{num}', '{lang}', '{space}', '{bksp}', '{enter}', '{close}'];
+    if (m === 'num') bottom = ['{abc}', '{lang}', '{left}', '{space}', '{right}', '{bksp}', '{enter}', '{close}'];
+    else if (m === 'ar') bottom = ['{num}', '{lang}', '{tashkeel}', '{left}', '{space}', '{right}', '{bksp}', '{enter}', '{close}'];
+    else bottom = ['{num}', '{lang}', '{left}', '{space}', '{right}', '{bksp}', '{enter}', '{close}'];
     rows.push(bottom);
     return rows;
   }
@@ -182,6 +189,9 @@
     root.setAttribute('dir', DIRS[state.mode]);
     root.innerHTML = '';
     keyEls = [];
+    previewEl = document.createElement('div');
+    previewEl.className = 'tvak-preview';
+    root.appendChild(previewEl);
     for (var r = 0; r < rows.length; r++) {
       var rowEl = document.createElement('div');
       rowEl.className = 'tvak-row';
@@ -193,6 +203,7 @@
         if (key.charAt(0) === '{') {
           k.className += ' tvak-wide';
           if (key === '{space}') k.className += ' tvak-space';
+          if (key === '{left}' || key === '{right}') k.className += ' tvak-arrow';
           if (key === '{enter}' || key === '{close}') k.className += ' tvak-action';
           if (key === '{tashkeel}' && state.tashkeel) k.className += ' tvak-on';
         }
@@ -205,6 +216,27 @@
     }
     clampCursor();
     paintActive();
+    updatePreview();
+  }
+
+  function updatePreview() {
+    var el = state.target;
+    if (!previewEl || !el) return;
+    var txt, pos;
+    if (el.isContentEditable) {
+      txt = el.textContent || '';
+      pos = txt.length;
+    } else {
+      txt = el.value || '';
+      pos = txt.length;
+      try { if (el.selectionStart !== null) pos = el.selectionStart; } catch (e) {}
+      if ((el.getAttribute('type') || '').toLowerCase() === 'password') {
+        txt = txt.replace(/[\s\S]/g, '•');
+      }
+    }
+    txt = txt.replace(/\n/g, ' ');
+    previewEl.setAttribute('dir', el.getAttribute('dir') || 'auto');
+    previewEl.textContent = txt.slice(0, pos) + '|' + txt.slice(pos);
   }
 
   function paintActive() {
@@ -395,6 +427,7 @@
     var pos = s.start + text.length;
     try { el.setSelectionRange(pos, pos); } catch (e2) {}
     fireEvent(el, 'input', text, 'insertText');
+    updatePreview();
   }
 
   function backspace() {
@@ -414,6 +447,28 @@
     setNativeValue(el, s.val.slice(0, start) + s.val.slice(s.end));
     try { el.setSelectionRange(start, start); } catch (e2) {}
     fireEvent(el, 'input', null, 'deleteContentBackward');
+    updatePreview();
+  }
+
+  // dir: -1 = يسار الشاشة، +1 = يمين الشاشة (في RTL اليسار = الأمام منطقياً)
+  function moveCaret(dir) {
+    var el = resolveTarget();
+    if (!el) return;
+    var rtl = el.getAttribute('dir') === 'rtl';
+    var delta = rtl ? -dir : dir;
+    if (el.isContentEditable) {
+      try {
+        window.getSelection().modify('move', delta > 0 ? 'forward' : 'backward', 'character');
+      } catch (e) {}
+      updatePreview();
+      return;
+    }
+    var s = getSel(el);
+    var pos;
+    if (s.start !== s.end) pos = delta < 0 ? s.start : s.end;
+    else pos = Math.max(0, Math.min(s.val.length, s.start + delta));
+    try { el.setSelectionRange(pos, pos); } catch (e2) {}
+    updatePreview();
   }
 
   function keyEvent(type, code, name) {
@@ -515,6 +570,8 @@
     switch (key) {
       case '{space}': insertText(' '); break;
       case '{bksp}': backspace(); break;
+      case '{left}': moveCaret(-1); break;
+      case '{right}': moveCaret(1); break;
       case '{enter}': submit(); break;
       case '{close}': closeKeyboard(); break;
       case '{num}': switchMode('num', '{abc}'); break;
@@ -571,7 +628,8 @@
       state.col = Math.round(ratio * (rows[state.row].length - 1));
       clampCursor(); paintActive();
     } else if (code === 13) {
-      if (!e.repeat || rows[state.row][state.col] === '{bksp}') {
+      var pk = rows[state.row][state.col];
+      if (!e.repeat || pk === '{bksp}' || pk === '{left}' || pk === '{right}') {
         pressActive();
       }
     } else {

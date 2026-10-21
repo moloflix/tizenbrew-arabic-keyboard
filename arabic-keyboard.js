@@ -7,17 +7,17 @@
   if (window.__tvakLoaded) return;
   window.__tvakLoaded = true;
 
-  var VERSION = '1.4.0';
+  var VERSION = '1.4.1';
   var CONFIG = {
     browserBar: true,       // شريط التصفح (رجوع/للأمام/تحديث/رابط) في وضع المؤشر + صفحة رئيسية
     backGoesBack: true,     // زر Back يرجع للصفحة السابقة بدل الخروج (إن لم تعالجه الصفحة)
     homeUrl: 'https://example.com/?tvak=home',
     homeBackground: 'https://cdn.jsdelivr.net/gh/moloflix/tizenbrew-arabic-keyboard@v1.4.0/assets/bg.webp',
-    favorites: [            // المواقع المفضلة في الصفحة الرئيسية: [الاسم، الرابط]
-      ['بحث', 'https://www.google.com'],
-      ['ميديا', 'https://laaroza.casa/home.24'],
-      ['أفلام أجنبية', 'https://www.fushaar.com/'],
-      ['أفلام كرتون', 'https://arabic-toons.com/']
+    favorites: [            // المواقع المفضلة: [الاسم، الرابط، الأيقونة: search|media|movie|cartoon]
+      ['بحث', 'https://www.google.com', 'search'],
+      ['ميديا', 'https://laaroza.casa/home.24', 'media'],
+      ['أفلام أجنبية', 'https://www.fushaar.com/', 'movie'],
+      ['أفلام كرتون', 'https://arabic-toons.com/', 'cartoon']
     ],
     showHint: true,         // رسالة قصيرة عند تحميل الصفحة تُظهر الإصدار (للتأكد أن الموديول يعمل)
     showKeyCodes: true,     // يعرض رمز أي زر غير معروف تضغطه (للتشخيص)
@@ -130,9 +130,10 @@
     '-webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%);',
     'box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 14px 38px rgba(0,0,0,0.35);}',
     '#tvak-home .tvak-ficon{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;',
-    '-webkit-justify-content:center;justify-content:center;width:92px;height:92px;border-radius:46px;margin-bottom:16px;',
+    '-webkit-justify-content:center;justify-content:center;width:108px;height:108px;border-radius:54px;margin-bottom:14px;',
     'font-size:46px;font-weight:bold;color:#fff;border:1px solid rgba(255,255,255,0.4);',
     'box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);}',
+    '#tvak-home .tvak-ficon svg{display:block;width:60px;height:60px;}',
     '#tvak-home .tvak-flabel{display:block;font-size:26px;text-shadow:0 2px 10px rgba(0,0,0,0.5);}',
     // ---- تمييز العنصر تحت المؤشر ----
     '#tvak-home .tvak-hsearch::-webkit-input-placeholder{color:rgba(255,255,255,0.82);}',
@@ -1034,6 +1035,47 @@
     return svg;
   }
 
+  // أيقونات البلاطات (SVG بدون innerHTML): مسارات 24x24 مع تدرج لوني لكل أيقونة
+  var TILE_ICONS = {
+    search: { grad: ['#4c8dff', '#8b5cf6'], shapes: [
+      { d: 'M10.5 4 A6.5 6.5 0 1 0 10.5 17 A6.5 6.5 0 1 0 10.5 4 Z' },
+      { d: 'M15.4 15.4 L20 20' }
+    ] },
+    media: { grad: ['#ff5f7e', '#ff9a5c'], shapes: [
+      { d: 'M6 5 H18 A2 2 0 0 1 20 7 V17 A2 2 0 0 1 18 19 H6 A2 2 0 0 1 4 17 V7 A2 2 0 0 1 6 5 Z' },
+      { d: 'M10 9 L15.5 12 L10 15 Z', fill: true }
+    ] },
+    movie: { grad: ['#ffb347', '#ff6b4a'], shapes: [
+      { d: 'M4 10 H20 V19 A1 1 0 0 1 19 20 H5 A1 1 0 0 1 4 19 Z' },
+      { d: 'M4 9 L3.2 5.6 L19.9 3.2 L20 7.2 Z' },
+      { d: 'M8.6 8.4 L9.5 4.6' },
+      { d: 'M13.6 7.7 L14.5 3.9' }
+    ] },
+    cartoon: { grad: ['#3ddc97', '#3aa8ff'], shapes: [
+      { d: 'M12 4 A8 8 0 1 0 12 20 A8 8 0 1 0 12 4 Z' },
+      { d: 'M9 9.2 A1.2 1.2 0 1 0 9.01 9.2 Z', fill: true },
+      { d: 'M15 9.2 A1.2 1.2 0 1 0 15.01 9.2 Z', fill: true },
+      { d: 'M8.4 13.4 Q12 18 15.6 13.4' }
+    ] }
+  };
+
+  function tileIcon(spec) {
+    var ns = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    for (var i = 0; i < spec.shapes.length; i++) {
+      var p = document.createElementNS(ns, 'path');
+      p.setAttribute('d', spec.shapes[i].d);
+      p.setAttribute('fill', spec.shapes[i].fill ? '#fff' : 'none');
+      p.setAttribute('stroke', '#fff');
+      p.setAttribute('stroke-width', '1.7');
+      p.setAttribute('stroke-linecap', 'round');
+      p.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(p);
+    }
+    return svg;
+  }
+
   function toUrl(t) {
     t = String(t || '').replace(/^\s+|\s+$/g, '');
     if (!t) return null;
@@ -1163,8 +1205,15 @@
     for (var i = 0; i < CONFIG.favorites.length; i++) {
       (function (f, idx) {
         var c = mkEl('div', 'tvak-fav tvak-hit');
-        var ic = mkEl('div', 'tvak-ficon', String(f[0]).charAt(0).toUpperCase());
-        ic.style.background = tileColor(idx);
+        var ic = mkEl('div', 'tvak-ficon');
+        var spec = TILE_ICONS[f[2]];
+        if (spec) {
+          ic.style.background = 'linear-gradient(135deg,' + spec.grad[0] + ',' + spec.grad[1] + ')';
+          ic.appendChild(tileIcon(spec));
+        } else {
+          ic.textContent = String(f[0]).charAt(0).toUpperCase();
+          ic.style.background = tileColor(idx);
+        }
         c.appendChild(ic);
         c.appendChild(mkEl('div', 'tvak-flabel', f[0]));
         c.addEventListener('click', function () { location.href = f[1]; });

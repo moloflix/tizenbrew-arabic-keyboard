@@ -18,6 +18,7 @@
 - صف تشكيل اختياري (فتحة، ضمة، كسرة، سكون، شدة، تنوين) بمفتاح «تشكيل».
 - اتجاه RTL للحقل أثناء الكتابة بالعربية.
 - **وضع مؤشر ماوس** بالريموت (للنقر على الأزرار مثل الموافقة على الكوكيز): أحد الأزرار الملونة (أحمر/أخضر/أصفر/أزرق)، أو ضغطة طويلة (حوالي ثانية) على OK.
+- **حظر الإعلانات المنبثقة**: يمنع `window.open` والروابط الخارجية التي تفتح نافذة جديدة، ويخفي عناصر الإعلانات المعروفة، ويحذف الطبقات الشفافة التي تخطف النقرات (`blockAds` في `CONFIG`). لا يمنع الإعلانات على مستوى الشبكة؛ للأقوى استخدم DNS يحجب الإعلانات (مثل AdGuard DNS) في إعدادات شبكة التلفزيون.
 - أسهم ← → لتحريك المؤشر داخل النص، وسطر معاينة يُظهر النص وموضع المؤشر.
 - تحجيم تلقائي حسب الشاشة (1080p و4K).
 - زر Back (`10009`) يغلق الكيبورد فقط دون الخروج من المتصفح.
@@ -30,7 +31,7 @@
    gh/<user>/<repo>
    ```
    مثال: `gh/moloflix/tizenbrew-arabic-keyboard`
-3. لتثبيت نسخة محددة استخدم الوسم: `gh/<user>/<repo>@v1.4.2`
+3. لتثبيت نسخة محددة استخدم الوسم: `gh/<user>/<repo>@v1.5.0`
    (jsDelivr يخزّن `main` مؤقتاً لساعات، لذلك الوسم أضمن).
 4. شغّل الموديول **Arabic Keyboard** من القائمة. يفتح `websiteURL` (الافتراضي Google)؛ غيّره في `package.json` إن أردت.
 
@@ -53,12 +54,12 @@
 ```bash
 # 1) حدّث "version" في package.json، ثم:
 git add -A
-git commit -m "release: v1.4.2"
-git tag v1.4.2
+git commit -m "release: v1.5.0"
+git tag v1.5.0
 git push origin main --tags
-# 2) (اختياري) أنشئ Release من صفحة GitHub أو: gh release create v1.4.2 --generate-notes
+# 2) (اختياري) أنشئ Release من صفحة GitHub أو: gh release create v1.5.0 --generate-notes
 ```
-بعد النشر استخدم `gh/<user>/<repo>@v1.4.2` في TizenBrew. إن لم يظهر التحديث، أضف وسماً جديداً (لا تعد استخدام نفس الوسم) أو أفرغ كاش jsDelivr من `https://www.jsdelivr.com/tools/purge`.
+بعد النشر استخدم `gh/<user>/<repo>@v1.5.0` في TizenBrew. إن لم يظهر التحديث، أضف وسماً جديداً (لا تعد استخدام نفس الوسم) أو أفرغ كاش jsDelivr من `https://www.jsdelivr.com/tools/purge`.
 
 ### ما لم يُختبر
 - ظهور/عدم ظهور الكيبورد الأصلي على Tizen (الحل يعتمد على `inputmode="none"` و`readonly`).
@@ -83,6 +84,7 @@ An on-screen Arabic keyboard for the Samsung (Tizen) TV browser, driven by the r
 - Optional diacritics row (fatha, damma, kasra, sukun, shadda, tanween).
 - RTL direction on the field while typing Arabic.
 - **Virtual mouse pointer** (to click buttons like cookie consent): Red button, or long-press OK (~1s).
+- **Pop-up/ad blocking**: blocks `window.open`, external new-window links, known ad elements and transparent click-hijack overlays (`blockAds` in `CONFIG`). It cannot block at network level; for stronger blocking use an ad-blocking DNS (e.g. AdGuard DNS) in the TV network settings.
 - ← → keys to move the caret, plus a preview line showing the text and caret.
 - Auto-scaling for 1080p and 4K.
 - Back (`10009`) closes only the keyboard, not the browser.
@@ -91,7 +93,7 @@ An on-screen Arabic keyboard for the Samsung (Tizen) TV browser, driven by the r
 ### Install
 1. Open **TizenBrew** → **Module Manager**.
 2. Add a GitHub module and enter `gh/<user>/<repo>` (e.g. `gh/moloflix/tizenbrew-arabic-keyboard`).
-3. To pin a version use a tag: `gh/<user>/<repo>@v1.4.2` (jsDelivr caches `main`).
+3. To pin a version use a tag: `gh/<user>/<repo>@v1.5.0` (jsDelivr caches `main`).
 4. Launch **Arabic Keyboard**. It opens `websiteURL` (Google by default); edit it in `package.json`.
 
 ### Controls
@@ -102,12 +104,12 @@ Arrows move, OK types / opens the keyboard on a field, Back closes the keyboard.
 
 ### Release
 ```bash
-git add -A && git commit -m "release: v1.4.2"
-git tag v1.4.2
+git add -A && git commit -m "release: v1.5.0"
+git tag v1.5.0
 git push origin main --tags
-gh release create v1.4.2 --generate-notes   # optional
+gh release create v1.5.0 --generate-notes   # optional
 ```
-Then use `gh/<user>/<repo>@v1.4.2`. If an update doesn't show, use a new tag or purge jsDelivr's cache.
+Then use `gh/<user>/<repo>@v1.5.0`. If an update doesn't show, use a new tag or purge jsDelivr's cache.
 
 ### Not tested
 Native keyboard suppression on real Tizen, actual remote key codes, iframe behavior, site-specific behavior (YouTube, etc.), and Arabic font rendering on TV fonts.

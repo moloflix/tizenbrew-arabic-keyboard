@@ -7,7 +7,7 @@
   if (window.__tvakLoaded) return;
   window.__tvakLoaded = true;
 
-  var VERSION = '1.4.2';
+  var VERSION = '1.5.0';
   var CONFIG = {
     browserBar: true,       // شريط التصفح (رجوع/للأمام/تحديث/رابط) في وضع المؤشر + صفحة رئيسية
     backGoesBack: true,     // زر Back يرجع للصفحة السابقة بدل الخروج (إن لم تعالجه الصفحة)
@@ -19,6 +19,7 @@
       ['أفلام أجنبية', 'https://www.fushaar.com/', 'movie'],
       ['أفلام كرتون', 'https://arabic-toons.com/', 'cartoon']
     ],
+    blockAds: true,         // حظر النوافذ المنبثقة وإخفاء الإعلانات المعروفة
     showHint: false,         // رسالة قصيرة عند تحميل الصفحة تُظهر الإصدار (للتأكد أن الموديول يعمل)
     showKeyCodes: false,     // يعرض رمز أي زر غير معروف تضغطه (للتشخيص)
     debugBanner: false,      // شريط أحمر يعرض الإصدار ورمز كل زر والأخطاء (للتشخيص فقط)
@@ -1379,6 +1380,122 @@
     if (state.open) layoutUI();
   }
 
+  // ---------- حظر الإعلانات المنبثقة ----------
+  // ملاحظة: لا يمكن حظر الشبكة من داخل الصفحة؛ هذا يعالج النوافذ المنبثقة والطبقات الشفافة والعناصر المعروفة فقط.
+  var AD_SELECTORS = [
+    'ins.adsbygoogle', '.adsbygoogle',
+    'iframe[src*="doubleclick.net"]', 'iframe[src*="googlesyndication.com"]', 'iframe[src*="adservice.google"]',
+    'iframe[src*="adsterra"]', 'iframe[src*="exoclick"]', 'iframe[src*="popads"]', 'iframe[src*="juicyads"]',
+    'iframe[src*="propellerads"]', 'iframe[src*="clickadu"]', 'iframe[src*="hilltopads"]',
+    'a[href*="exoclick.com"]', 'a[href*="popads.net"]', 'a[href*="juicyads.com"]', 'a[href*="adsterra.com"]',
+    'a[href*="propellerads.com"]', 'a[href*="trafficjunky.net"]', 'a[href*="clickadu.com"]', 'a[href*="hilltopads.net"]',
+    '[id^="div-gpt-ad"]', '[id*="google_ads_iframe"]', '.ad-banner', '.ads-banner', '.advertisement', '.adsbox'
+  ];
+  var adCount = 0;
+  var adStyle = null;
+  var lastAdToast = 0;
+
+  function adBlocked() {
+    adCount++;
+    var t = now();
+    if (t - lastAdToast > 1500) {
+      lastAdToast = t;
+      if (ensurePointerUI()) showToast('تم حظر إعلان (' + adCount + ')');
+    }
+  }
+
+  function hostOf(u) {
+    try {
+      var a = document.createElement('a');
+      a.href = u;
+      return a.hostname;
+    } catch (e) { return ''; }
+  }
+
+  function sameSite(u) {
+    var h = hostOf(u);
+    var me = location.hostname;
+    if (!h || h === me) return true;
+    return h.slice(-(me.length + 1)) === '.' + me || me.slice(-(h.length + 1)) === '.' + h;
+  }
+
+  function attachAdStyle() {
+    var host = document.head || document.documentElement;
+    if (!host) return;
+    if (!adStyle) {
+      adStyle = document.createElement('style');
+      adStyle.id = 'tvak-adstyle';
+      adStyle.textContent = AD_SELECTORS.join(',') + '{display:none !important;}';
+    }
+    if (adStyle.parentNode !== host) host.appendChild(adStyle);
+  }
+
+  // طبقة شفافة بحجم الشاشة وهي رابط خارجي = خطف نقرات: نحذفها (لا نلمس iframe حتى لا نكسر المشغّل)
+  function sweepOverlays() {
+    var w = window.innerWidth || 1920;
+    var h = window.innerHeight || 1080;
+    var pts = [[0.5, 0.5], [0.25, 0.3], [0.75, 0.7]];
+    for (var i = 0; i < pts.length; i++) {
+      var el;
+      try { el = document.elementFromPoint(w * pts[i][0], h * pts[i][1]); } catch (e) { el = null; }
+      var n = el;
+      for (var j = 0; j < 6 && n && n.nodeType === 1 && n !== document.body && n !== document.documentElement; j++) {
+        if (n.tagName === 'A' && n.href && !sameSite(n.href)) {
+          var cs = window.getComputedStyle(n);
+          if (cs.position === 'fixed' || cs.position === 'absolute') {
+            var r = n.getBoundingClientRect();
+            var clear = parseFloat(cs.opacity) < 0.1 || cs.backgroundColor === 'rgba(0, 0, 0, 0)' || cs.backgroundColor === 'transparent';
+            var txt = (n.textContent || '').replace(/\s+/g, '');
+            if (r.width >= w * 0.8 && r.height >= h * 0.8 && clear && txt.length < 3) {
+              if (n.parentNode) n.parentNode.removeChild(n);
+              adBlocked();
+              break;
+            }
+          }
+        }
+        n = n.parentNode;
+      }
+    }
+  }
+
+  function installAdBlock() {
+    if (!CONFIG.blockAds) return;
+    try {
+      window.open = function () {
+        adBlocked();
+        // كائن وهمي حتى لا تعتبر الصفحة أن المنبثقة فشلت وتحوّلك بالقوة لرابط الإعلان
+        return {
+          closed: true, close: function () {}, focus: function () {}, blur: function () {},
+          postMessage: function () {}, location: { href: '' }, document: { write: function () {}, close: function () {} }
+        };
+      };
+    } catch (e) {}
+    try {
+      var origClick = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function () {
+        if (this.target === '_blank' && !sameSite(this.href)) { adBlocked(); return; }
+        return origClick.apply(this, arguments);
+      };
+    } catch (e2) {}
+    document.addEventListener('click', function (e) {
+      var n = e.target;
+      for (var i = 0; i < 6 && n && n.nodeType === 1; i++) {
+        if (n.tagName === 'A') break;
+        n = n.parentNode;
+      }
+      if (n && n.nodeType === 1 && n.tagName === 'A' && n.target === '_blank' && !sameSite(n.href)) {
+        e.preventDefault();
+        e.stopPropagation();
+        adBlocked();
+      }
+    }, true);
+    attachAdStyle();
+    if (!document.documentElement) document.addEventListener('DOMContentLoaded', attachAdStyle);
+    setInterval(function () {
+      try { attachAdStyle(); sweepOverlays(); } catch (e3) {}
+    }, 2000);
+  }
+
   // ---------- Init ----------
   // لا نعتمد على document.body: قد يكون الحقن مبكراً. الواجهة تُنشأ عند أول فتح.
   window.addEventListener('keydown', onKeyDown, true);
@@ -1395,6 +1512,7 @@
     }
   }, false);
   onReady(buildHome);
+  installAdBlock();
   document.addEventListener('focus', onFocus, true);
   document.addEventListener('blur', onBlur, true);
 

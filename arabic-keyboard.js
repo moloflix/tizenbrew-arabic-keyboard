@@ -7,8 +7,19 @@
   if (window.__tvakLoaded) return;
   window.__tvakLoaded = true;
 
-  var VERSION = '1.2.4';
+  var VERSION = '1.3.0';
   var CONFIG = {
+    browserBar: true,       // شريط التصفح (رجوع/للأمام/تحديث/رابط) في وضع المؤشر + صفحة رئيسية
+    backGoesBack: true,     // زر Back يرجع للصفحة السابقة بدل الخروج (إن لم تعالجه الصفحة)
+    homeUrl: 'https://example.com/?tvak=home',
+    favorites: [            // المواقع المفضلة في الصفحة الرئيسية: [الاسم، الرابط]
+      ['Google', 'https://www.google.com'],
+      ['YouTube', 'https://www.youtube.com'],
+      ['ويكيبيديا', 'https://ar.wikipedia.org'],
+      ['الجزيرة نت', 'https://www.aljazeera.net'],
+      ['BBC عربي', 'https://www.bbc.com/arabic'],
+      ['Bing', 'https://www.bing.com']
+    ],
     showHint: true,         // رسالة قصيرة عند تحميل الصفحة تُظهر الإصدار (للتأكد أن الموديول يعمل)
     showKeyCodes: true,     // يعرض رمز أي زر غير معروف تضغطه (للتشخيص)
     debugBanner: true,      // شريط أحمر يعرض الإصدار ورمز كل زر والأخطاء (للتشخيص فقط)
@@ -77,7 +88,25 @@
     '#tvak-toast{all:initial;position:fixed;top:24px;left:50%;z-index:2147483647;pointer-events:none;display:none;',
     'background:rgba(20,20,22,0.92);color:#fff;font-family:Arial,"Noto Sans Arabic",sans-serif;font-size:26px;',
     'padding:12px 24px;border-radius:10px;-webkit-transform:translateX(-50%);transform:translateX(-50%);white-space:nowrap;}',
-    '#tvak-toast.tvak-on{display:block;}'
+    '#tvak-toast.tvak-on{display:block;}',
+    '#tvak-bar{all:initial;position:fixed;top:0;left:0;z-index:2147483646;display:none;box-sizing:border-box;',
+    'background:rgba(24,24,26,0.97);border-bottom:1px solid #4a4a4f;padding:10px 16px;direction:ltr;',
+    'font-family:Arial,"Noto Sans Arabic",sans-serif;-webkit-transform-origin:0 0;transform-origin:0 0;}',
+    '#tvak-bar.tvak-on{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;}',
+    '#tvak-bar .tvak-bbtn{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;',
+    '-webkit-justify-content:center;justify-content:center;min-width:120px;height:56px;padding:0 18px;margin-right:10px;',
+    'background:#3a3a3e;color:#ececee;font-size:24px;border-radius:8px;box-sizing:border-box;}',
+    '#tvak-bar .tvak-bgo{background:#2f7bff;color:#fff;margin-right:0;}',
+    '#tvak-bar .tvak-burl{-webkit-flex:1;flex:1;min-width:0;height:56px;margin:0 10px 0 0;padding:0 16px;background:#0e0e10;',
+    'color:#f2f2f4;font-size:24px;border:2px solid #4a4a4f;border-radius:8px;box-sizing:border-box;}',
+    '#tvak-home{all:initial;position:fixed;top:0;left:0;z-index:2147483640;display:block;box-sizing:border-box;',
+    'background:#141416;padding:130px 80px 40px;direction:rtl;color:#fff;overflow:hidden;',
+    'font-family:Arial,"Noto Sans Arabic",sans-serif;-webkit-transform-origin:0 0;transform-origin:0 0;}',
+    '#tvak-home .tvak-htitle{display:block;font-size:56px;font-weight:bold;margin-bottom:12px;text-align:center;}',
+    '#tvak-home .tvak-hsub{display:block;font-size:26px;color:#9a9aa2;margin-bottom:48px;text-align:center;}',
+    '#tvak-home .tvak-hgrid{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:center;justify-content:center;}',
+    '#tvak-home .tvak-fav{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;',
+    'justify-content:center;width:360px;height:150px;margin:14px;background:#2b2b2e;border-radius:16px;font-size:34px;color:#fff;}'
   ].join('');
 
   // ---------- Layouts ----------
@@ -91,7 +120,7 @@
     en: [
       ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
       ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
-      ['z', 'x', 'c', 'v', 'b', 'n', 'm', '.', '-']
+      ['z', 'x', 'c', 'v', 'b', 'n', 'm', '.', '-', '/']
     ],
     num: [
       ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
@@ -249,10 +278,8 @@
           if (key === '{tashkeel}' && state.tashkeel) k.className += ' tvak-on';
         }
         k.textContent = labelOf(key);
-        // الترتيب البصري صريح (لا نعتمد على دعم direction في متصفح التلفزيون):
-        // في العربي أول مفتاح منطقياً يكون أقصى اليمين
-        if (DIRS[state.mode] === 'rtl') rowEl.insertBefore(k, rowEl.firstChild);
-        else rowEl.appendChild(k);
+        // ترتيب بصري ثابت يساراً→يميناً (مثل كيبورد الهاتف: ض أقصى اليسار و د أقصى اليمين)
+        rowEl.appendChild(k);
         els.push(k);
       }
       root.appendChild(rowEl);
@@ -577,6 +604,13 @@
   function openKeyboard(el, explicit) {
     if (!ensureUI()) return;
     bind(el);
+    if (el.id === 'tvak-url') {
+      state.prevLetter = state.lastLetterMode;
+      state.mode = 'en';
+      state.lastLetterMode = 'en';
+      applyDir();
+      try { el.setSelectionRange(0, (el.value || '').length); } catch (e) {}
+    }
     state.open = true;
     state.dismissed = null;
     state.row = 0;
@@ -593,6 +627,11 @@
     var el = state.target;
     state.open = false;
     if (root) root.className = '';
+    if (state.prevLetter) {
+      state.lastLetterMode = state.prevLetter;
+      state.mode = state.prevLetter;
+      state.prevLetter = null;
+    }
     unwatch();
     unbind();
     state.dismissed = el;
@@ -838,6 +877,7 @@
     ptr.on = true;
     ptr.el.className = 'tvak-on';
     positionCursor();
+    showBar();
     showToast('وضع المؤشر: الأسهم للتحريك، OK للنقر، Back للخروج');
     if (ptr.fromParent) {
       try { window.parent.postMessage({ tvak: 'ptr-ack' }, '*'); } catch (e) {}
@@ -847,6 +887,7 @@
   function exitPointer(notifyParent) {
     ptr.on = false;
     ptr.count = 0;
+    hideBar();
     if (ptr.el) ptr.el.className = '';
     if (ptr.hover) { try { mouseEv('mouseout', ptr.hover); } catch (e) {} ptr.hover = null; }
     if (notifyParent !== false && ptr.fromParent) {
@@ -893,6 +934,124 @@
       ptr.fromParent = false;
       enterPointer();
     }
+  }
+
+  // ---------- شريط التصفح + الصفحة الرئيسية ----------
+  var bar = null;
+  var urlInput = null;
+  var home = null;
+
+  function mkEl(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  function toUrl(t) {
+    t = String(t || '').replace(/^\s+|\s+$/g, '');
+    if (!t) return null;
+    if (/^[a-z][a-z0-9+.\-]*:\/\//i.test(t)) return t;
+    if (/\s/.test(t) || t.indexOf('.') === -1) {
+      return 'https://www.google.com/search?q=' + encodeURIComponent(t);
+    }
+    return 'https://' + t;
+  }
+
+  function goTo(t) {
+    var u = toUrl(t);
+    if (u) { diag('→ ' + u, 3000); location.href = u; }
+  }
+
+  function scaleBox(el) {
+    var w = window.innerWidth || 1920;
+    var s = uiScale();
+    el.style.width = Math.round(w / s) + 'px';
+    var tf = 'scale(' + s + ')';
+    el.style.webkitTransform = tf;
+    el.style.transform = tf;
+  }
+
+  function ensureBar() {
+    var host = document.body || document.documentElement;
+    if (!host || !ensureUI()) return false;
+    if (!bar) {
+      bar = mkEl('div');
+      bar.id = 'tvak-bar';
+      var items = [
+        ['رجوع', function () { history.back(); }],
+        ['للأمام', function () { history.forward(); }],
+        ['تحديث', function () { location.reload(); }],
+        ['الرئيسية', function () { location.href = CONFIG.homeUrl; }]
+      ];
+      for (var i = 0; i < items.length; i++) {
+        (function (it) {
+          var b = mkEl('div', 'tvak-bbtn', it[0]);
+          b.addEventListener('click', it[1]);
+          bar.appendChild(b);
+        })(items[i]);
+      }
+      urlInput = document.createElement('input');
+      urlInput.type = 'text';
+      urlInput.id = 'tvak-url';
+      urlInput.className = 'tvak-burl';
+      urlInput.setAttribute('dir', 'ltr');
+      urlInput.setAttribute('placeholder', 'اكتب رابطاً أو كلمة للبحث');
+      urlInput.addEventListener('keydown', function (e) {
+        if (e.keyCode === 13) goTo(urlInput.value);
+      });
+      bar.appendChild(urlInput);
+      var go = mkEl('div', 'tvak-bbtn tvak-bgo', 'اذهب');
+      go.addEventListener('click', function () { goTo(urlInput.value); });
+      bar.appendChild(go);
+    }
+    if (bar.parentNode !== host) host.appendChild(bar);
+    return true;
+  }
+
+  function showBar() {
+    if (!CONFIG.browserBar || !ensureBar()) return;
+    scaleBox(bar);
+    if (urlInput && !state.open) urlInput.value = location.href;
+    bar.className = 'tvak-on';
+  }
+
+  function hideBar() {
+    if (bar) bar.className = '';
+  }
+
+  function isHomePage() {
+    try {
+      return location.hostname === 'example.com' && /(^|[?&])tvak=home(&|$)/.test(location.search);
+    } catch (e) { return false; }
+  }
+
+  function buildHome() {
+    if (!CONFIG.browserBar || !isHomePage() || !document.body) return;
+    if (home && home.parentNode === document.body) return;
+    home = mkEl('div');
+    home.id = 'tvak-home';
+    home.appendChild(mkEl('div', 'tvak-htitle', 'الصفحة الرئيسية'));
+    home.appendChild(mkEl('div', 'tvak-hsub', 'اختر موقعاً، أو اكتب رابطاً في الشريط العلوي'));
+    var grid = mkEl('div', 'tvak-hgrid');
+    for (var i = 0; i < CONFIG.favorites.length; i++) {
+      (function (f) {
+        var c = mkEl('div', 'tvak-fav', f[0]);
+        c.addEventListener('click', function () { location.href = f[1]; });
+        grid.appendChild(c);
+      })(CONFIG.favorites[i]);
+    }
+    home.appendChild(grid);
+    document.body.appendChild(home);
+    scaleBox(home);
+    home.style.height = Math.round((window.innerHeight || 1080) / uiScale()) + 'px';
+    try { document.title = 'الصفحة الرئيسية'; } catch (e) {}
+    enterPointer(); // نبدأ بوضع المؤشر ليتمكن المستخدم من الاختيار مباشرة
+  }
+
+  function onReady(fn) {
+    if (document.body) fn();
+    else document.addEventListener('DOMContentLoaded', fn);
   }
 
   // ---------- Remote control ----------
@@ -951,7 +1110,7 @@
       return;
     }
 
-    var rtl = DIRS[state.mode] === 'rtl';
+    var rtl = false; // تخطيط الكيبورد لا ينعكس؛ اتجاه الحقل منفصل
     var rows = getRows();
     var handled = true;
 
@@ -1040,6 +1199,16 @@
   window.addEventListener('keyup', onKeyUp, true);
   window.addEventListener('resize', onResize);
   window.addEventListener('message', onMessage, false);
+  // Back كمتصفح: يرجع للصفحة السابقة إن لم تعالج الصفحة المفتاح بنفسها (يُنفَّذ بعد معالجات الصفحة)
+  window.addEventListener('keydown', function (e) {
+    if (!CONFIG.backGoesBack || e.keyCode !== 10009 || e.defaultPrevented || synthetic) return;
+    if (state.open || ptr.on) return;
+    if (window.history && history.length > 1) {
+      e.preventDefault();
+      history.back();
+    }
+  }, false);
+  onReady(buildHome);
   document.addEventListener('focus', onFocus, true);
   document.addEventListener('blur', onBlur, true);
 

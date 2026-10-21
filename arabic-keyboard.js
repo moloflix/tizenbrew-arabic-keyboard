@@ -7,7 +7,7 @@
   if (window.__tvakLoaded) return;
   window.__tvakLoaded = true;
 
-  var VERSION = '1.5.3';
+  var VERSION = '1.5.4';
   var CONFIG = {
     browserBar: true,       // شريط التصفح (رجوع/للأمام/تحديث/رابط) في وضع المؤشر + صفحة رئيسية
     backGoesBack: true,     // زر Back يرجع للصفحة السابقة بدل الخروج (إن لم تعالجه الصفحة)
@@ -15,8 +15,7 @@
     homeBackground: 'https://cdn.jsdelivr.net/gh/moloflix/tizenbrew-arabic-keyboard@v1.4.0/assets/bg.webp',
     favorites: [            // المواقع المفضلة: [الاسم، الرابط، الأيقونة: search|media|movie|cartoon]
       ['بحث', 'https://www.google.com', 'search'],
-      ['ميديا', 'https://laaroza.casa/home.24', 'media'],
-      ['أفلام أجنبية', 'https://www.fushaar.com/', 'movie'],
+      ['ميديا', 'https://brstej.com/home03', 'media'],
       ['أفلام كرتون', 'https://arabic-toons.com/', 'cartoon']
     ],
     barTop: 56,             // المسافة بين شريط التصفح وأعلى الشاشة (بوحدات 1080p) لتفادي قص أطراف الشاشة
